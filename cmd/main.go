@@ -9,11 +9,11 @@ import (
 )
 
 func main() {
-	storе := storage.NewInMemoryTaskStorage()
-	svc := service.NewTaskService(storе)
+	store := storage.NewInMemoryTaskStorage()
+	svc := service.NewTaskService(store)
 	handler := api.NewTaskHandler(svc)
 
-	http.Handle("/tasks/", handler)
+	http.Handle("/tasks", handler)
 
 	log.Println("listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

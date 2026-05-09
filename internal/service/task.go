@@ -49,8 +49,8 @@ type TaskService struct {
 	storage storage.TaskStorage
 }
 
-func NewTaskService(storage storage.TaskStorage) *TaskService {
-	return &TaskService{storage: storage}
+func NewTaskService(storage storage.TaskStorage) TaskService {
+	return TaskService{storage: storage}
 }
 
 func (s *TaskService) GetTask(id int) (*models.Task, error) {
@@ -74,13 +74,13 @@ func (s *TaskService) ListTasks() ([]*models.Task, error) {
 	return s.storage.GetAll()
 }
 
-func (s *TaskService) CreateTask(t *models.Task) error {
+func (s *TaskService) CreateTask(t *models.Task) (int, error) {
 	if t == nil {
-		return NewValidationError("task", nil, "is nil")
+		return 0, NewValidationError("task", nil, "is nil")
 	}
 
 	if t.Title == "" {
-		return NewValidationError("title", nil, "invalid")
+		return 0, NewValidationError("title", nil, "invalid")
 	}
 
 	return s.storage.Create(t)

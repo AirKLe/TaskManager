@@ -15,10 +15,10 @@ type createTaskRequest struct {
 }
 
 type TaskHandler struct {
-	service *service.TaskService
+	service service.TaskService
 }
 
-func NewTaskHandler(service *service.TaskService) *TaskHandler {
+func NewTaskHandler(service service.TaskService) *TaskHandler {
 	return &TaskHandler{service: service}
 }
 
@@ -44,10 +44,10 @@ func (h *TaskHandler) handleError(w http.ResponseWriter, err error) {
 			"resource": nf.Resource,
 			"id":       nf.Id,
 		})
+		return
 	}
 
 	w.WriteHeader(http.StatusInternalServerError)
-
 	json.NewEncoder(w).Encode(map[string]any{
 		"error": "internal_error",
 	})
@@ -90,6 +90,7 @@ func (h *TaskHandler) handleListTasks(w http.ResponseWriter, r *http.Request) {
 	tasks, err := h.service.ListTasks()
 	if err != nil {
 		h.handleError(w, err)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -100,6 +101,7 @@ func (h *TaskHandler) handleGetTask(w http.ResponseWriter, r *http.Request, id i
 	task, err := h.service.GetTask(id)
 	if err != nil {
 		h.handleError(w, err)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -119,10 +121,17 @@ func (h *TaskHandler) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		Description: body.Description,
 	}
 
-	h.service.CreateTask(t)
+	id, err := h.service.CreateTask(t)
+	if err != nil {
+		h.handleError(w, err)
+		return
+	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(t)
+	json.NewEncoder(w).Encode(map[string]int{
+		"id": id,
+	})
 }
 
 func (h *TaskHandler) handleUpdateTask(w http.ResponseWriter, r *http.Request, id int) {
@@ -139,8 +148,13 @@ func (h *TaskHandler) handleUpdateTask(w http.ResponseWriter, r *http.Request, i
 		Description: body.Description,
 	}
 
-	h.service.UpdateTask(t)
+	err := h.service.UpdateTask(t)
+	if err != nil {
+		h.handleError(w, err)
+		return
+	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(t)
 }
@@ -150,5 +164,6 @@ func (h *TaskHandler) handleDeleteTask(w http.ResponseWriter, r *http.Request, i
 		h.handleError(w, err)
 		return
 	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
