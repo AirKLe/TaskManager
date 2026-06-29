@@ -1,39 +1,12 @@
 package service
 
 import (
+	"TaskManager/internal/mocks"
 	"TaskManager/internal/models"
 	"TaskManager/internal/storage"
 	"errors"
 	"testing"
 )
-
-type mockTaskStorage struct {
-	GetByIdFunc func(id int) (*models.Task, error)
-	GetAllFunc  func() ([]*models.Task, error)
-	CreateFunc  func(t *models.Task) (int, error)
-	UpdateFunc  func(t *models.Task) error
-	DeleteFunc  func(id int) error
-}
-
-func (m *mockTaskStorage) GetById(id int) (*models.Task, error) {
-	return m.GetByIdFunc(id)
-}
-
-func (m *mockTaskStorage) GetAll() ([]*models.Task, error) {
-	return m.GetAllFunc()
-}
-
-func (m *mockTaskStorage) Create(t *models.Task) (int, error) {
-	return m.CreateFunc(t)
-}
-
-func (m *mockTaskStorage) Update(t *models.Task) error {
-	return m.UpdateFunc(t)
-}
-
-func (m *mockTaskStorage) Delete(id int) error {
-	return m.DeleteFunc(id)
-}
 
 func TestGetTask_Success(t *testing.T) {
 	expected := &models.Task{
@@ -42,7 +15,7 @@ func TestGetTask_Success(t *testing.T) {
 		Description: "Napking",
 	}
 
-	mockStore := &mockTaskStorage{
+	mockStore := &mocks.MockTaskStorage{
 		GetByIdFunc: func(id int) (*models.Task, error) {
 			if id != 36 {
 				t.Errorf("Expected id 36, got %d", id)
@@ -75,7 +48,7 @@ func TestGetTask_InvalidId(t *testing.T) {
 }
 
 func TestCreateTask_Success(t *testing.T) {
-	mockStore := &mockTaskStorage{
+	mockStore := &mocks.MockTaskStorage{
 		CreateFunc: func(t *models.Task) (int, error) {
 			return t.Id, nil
 		},
@@ -114,7 +87,7 @@ func TestUpdateTask_Success(test *testing.T) {
 		Title: "NewTask",
 	}
 
-	mockStore := &mockTaskStorage{
+	mockStore := &mocks.MockTaskStorage{
 		UpdateFunc: func(t *models.Task) error {
 			if t.Id != 36 {
 				test.Errorf("Expected 36, got %v", t.Id)
@@ -169,7 +142,7 @@ func TestUpdateTask_EmptyTitle(t *testing.T) {
 }
 
 func TestUpdateTask_NotFound(t *testing.T) {
-	mockStore := &mockTaskStorage{
+	mockStore := &mocks.MockTaskStorage{
 		UpdateFunc: func(t *models.Task) error {
 			return storage.ErrNotFound
 		},
@@ -193,9 +166,9 @@ func TestUpdateTask_NotFound(t *testing.T) {
 func TestDeleteTask_Success(test *testing.T) {
 	expectedId := 36
 
-	mockStore := &mockTaskStorage{
+	mockStore := &mocks.MockTaskStorage{
 		DeleteFunc: func(id int) error {
-			if id != 36 {
+			if id != expectedId {
 				test.Errorf("Expected 36, got %v", id)
 			}
 			return nil
