@@ -2,9 +2,12 @@ package storage
 
 import (
 	"TaskManager/internal/models"
+	"context"
 	"errors"
 	"fmt"
 	"sync"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type TaskStorage interface {
@@ -17,73 +20,138 @@ type TaskStorage interface {
 
 var ErrNotFound = errors.New("not found")
 
-type inMemoryTaskStorage struct {
-	mu     sync.RWMutex
-	data   map[int]*models.Task
-	nextId int
+type PostgresTaskStorage struct {
+	mu sync.RWMutex
+	db *pgxpool.Pool
 }
 
-func NewInMemoryTaskStorage() *inMemoryTaskStorage {
-	return &inMemoryTaskStorage{
-		mu:     sync.RWMutex{},
-		data:   make(map[int]*models.Task),
-		nextId: 1,
+func NewPostgresTaskStorage(db *pgxpool.Pool) *PostgresTaskStorage {
+	return &PostgresTaskStorage{
+		db: db,
 	}
 }
 
-func (s *inMemoryTaskStorage) GetById(id int) (*models.Task, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func (s *PostgresTaskStorage) GetById(id int) (*models.Task, error) {
+	query := `
+		SELECT id, title, description
+		FROM tasks
+		WHERE id =$1
+	`
 
-	task, ok := s.data[id]
-	if !ok {
-		return nil, fmt.Errorf("task %v: %w", id, ErrNotFound)
+	task := &models.Task{}
+	err := s.db.QueryRow(context.Background(), query, id).Scan(
+		&task.Id,
+		&task.Title,
+		&task.Description,
+	)
+
+	if err != nil {
+		return nil, err
 	}
 
 	return task.Clone(), nil
 }
 
-func (s *inMemoryTaskStorage) GetAll() ([]*models.Task, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func (s *PostgresTaskStorage) GetAll() ([]*models.Task, error) {
+	query := `
+		SELECT id, title, description
+		FROM tasks
+	`
 
-	tasks := make([]*models.Task, 0, len(s.data))
-	for _, t := range s.data {
-		tasks = append(tasks, t.Clone())
+	rows, err := s.db.Query(context.Background(), query)
+	if err != nil {
+		return nil, err
 	}
+	defer rows.Close()
+
+	tasks := make([]*models.Task, 0)
+
+	for rows.Next() {
+		task := &models.Task{}
+
+		err := rows.Scan(
+			&task.Id,
+			&task.Title,
+			&task.Description,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return tasks, nil
 }
 
-func (s *inMemoryTaskStorage) Create(t *models.Task) (int, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *PostgresTaskStorage) Create(t *models.Task) (int, error) {
+	query := `
+		INSERT INTO tasks (title, description)
+		VALUES ($1,$2)
+		RETURNING id`
 
-	copy := t.Clone()
-	copy.Id = s.nextId
-	s.data[copy.Id] = copy
-	s.nextId++
-	return copy.Id, nil
+	err := s.db.QueryRow(
+		context.Background(),
+		query,
+		t.Title,
+		t.Description,
+	).Scan(&t.Id)
+	if err != nil {
+		return 0, err
+	}
+
+	return t.Id, err
 }
 
-func (s *inMemoryTaskStorage) Update(t *models.Task) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *PostgresTaskStorage) Update(t *models.Task) error {
+	query := `
+		UPDATE tasks
+		SET title = $1, description = $2
+		WHERE id = $3`
 
-	if _, ok := s.data[t.Id]; !ok {
+	result, err := s.db.Exec(
+		context.Background(),
+		query,
+		t.Title,
+		t.Description,
+		t.Id,
+	)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+
+	if rowsAffected != 1 {
 		return fmt.Errorf("task %v: %w", t.Id, ErrNotFound)
 	}
-	s.data[t.Id] = t.Clone()
+
 	return nil
 }
 
-func (s *inMemoryTaskStorage) Delete(id int) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if _, ok := s.data[id]; ok {
-		delete(s.data, id)
-		return nil
+func (s *PostgresTaskStorage) Delete(id int) error {
+	query := `
+	DELETE FROM tasks
+	WHERE id = $1
+	`
+	result, err := s.db.Exec(
+		context.Background(),
+		query,
+		id,
+	)
+	if err != nil {
+		return err
 	}
 
-	return fmt.Errorf("task %v: %w", id, ErrNotFound)
+	rowsAffected := result.RowsAffected()
+
+	if rowsAffected != 1 {
+		return fmt.Errorf("task %v: %w", id, ErrNotFound)
+	}
+
+	return nil
 }
