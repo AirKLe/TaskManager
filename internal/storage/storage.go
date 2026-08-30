@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -46,6 +47,9 @@ func (s *PostgresTaskStorage) GetById(id int) (*models.Task, error) {
 	)
 
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("task %v: %w", id, ErrNotFound)
+		}
 		return nil, err
 	}
 
