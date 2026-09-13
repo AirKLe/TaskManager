@@ -3,6 +3,7 @@ package service
 import (
 	"TaskManager/internal/models"
 	"TaskManager/internal/storage"
+	"context"
 	"errors"
 	"fmt"
 )
@@ -53,12 +54,12 @@ func NewTaskService(storage storage.TaskStorage) TaskService {
 	return TaskService{storage: storage}
 }
 
-func (s *TaskService) GetTask(id int) (*models.Task, error) {
+func (s *TaskService) GetTask(ctx context.Context, id int) (*models.Task, error) {
 	if id <= 0 {
 		return nil, NewValidationError("id", id, "invalid")
 	}
 
-	task, err := s.storage.GetById(id)
+	task, err := s.storage.GetById(ctx, id)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, NewNotFoundError("task", id)
@@ -70,11 +71,11 @@ func (s *TaskService) GetTask(id int) (*models.Task, error) {
 	return task, nil
 }
 
-func (s *TaskService) ListTasks() ([]*models.Task, error) {
-	return s.storage.GetAll()
+func (s *TaskService) ListTasks(ctx context.Context) ([]*models.Task, error) {
+	return s.storage.GetAll(ctx)
 }
 
-func (s *TaskService) CreateTask(t *models.Task) (int, error) {
+func (s *TaskService) CreateTask(ctx context.Context, t *models.Task) (int, error) {
 	if t == nil {
 		return 0, NewValidationError("task", nil, "is nil")
 	}
@@ -83,10 +84,10 @@ func (s *TaskService) CreateTask(t *models.Task) (int, error) {
 		return 0, NewValidationError("title", nil, "invalid")
 	}
 
-	return s.storage.Create(t)
+	return s.storage.Create(ctx, t)
 }
 
-func (s *TaskService) UpdateTask(t *models.Task) error {
+func (s *TaskService) UpdateTask(ctx context.Context, t *models.Task) error {
 	if t == nil {
 		return NewValidationError("task", nil, "is nil")
 	}
@@ -99,7 +100,7 @@ func (s *TaskService) UpdateTask(t *models.Task) error {
 		return NewValidationError("title", nil, "invalid")
 	}
 
-	err := s.storage.Update(t)
+	err := s.storage.Update(ctx, t)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return NewNotFoundError("task", t.Id)
@@ -110,12 +111,12 @@ func (s *TaskService) UpdateTask(t *models.Task) error {
 	return nil
 }
 
-func (s *TaskService) DeleteTask(id int) error {
+func (s *TaskService) DeleteTask(ctx context.Context, id int) error {
 	if id <= 0 {
 		return NewValidationError("id", id, "invalid")
 	}
 
-	err := s.storage.Delete(id)
+	err := s.storage.Delete(ctx, id)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return NewNotFoundError("task", id)

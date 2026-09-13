@@ -4,6 +4,7 @@ import (
 	"TaskManager/internal/mocks"
 	"TaskManager/internal/models"
 	"TaskManager/internal/storage"
+	"context"
 	"errors"
 	"testing"
 )
@@ -16,7 +17,7 @@ func TestGetTask_Success(t *testing.T) {
 	}
 
 	mockStore := &mocks.MockTaskStorage{
-		GetByIdFunc: func(id int) (*models.Task, error) {
+		GetByIdFunc: func(ctx context.Context, id int) (*models.Task, error) {
 			if id != 36 {
 				t.Errorf("Expected id 36, got %d", id)
 			}
@@ -25,7 +26,7 @@ func TestGetTask_Success(t *testing.T) {
 	}
 	service := NewTaskService(mockStore)
 
-	got, err := service.GetTask(36)
+	got, err := service.GetTask(context.Background(), 36)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +39,7 @@ func TestGetTask_Success(t *testing.T) {
 func TestGetTask_InvalidId(t *testing.T) {
 	service := NewTaskService(nil)
 
-	_, err := service.GetTask(-2)
+	_, err := service.GetTask(context.Background(), -2)
 
 	var validationErr *ValidationError
 
@@ -49,18 +50,20 @@ func TestGetTask_InvalidId(t *testing.T) {
 
 func TestCreateTask_Success(t *testing.T) {
 	mockStore := &mocks.MockTaskStorage{
-		CreateFunc: func(t *models.Task) (int, error) {
+		CreateFunc: func(ctx context.Context, t *models.Task) (int, error) {
 			return t.Id, nil
 		},
 	}
 
 	service := NewTaskService(mockStore)
 
-	id, err := service.CreateTask(&models.Task{
-		Id:          36,
-		Title:       "NewTask",
-		Description: "Napking",
-	})
+	id, err := service.CreateTask(
+		context.Background(),
+		&models.Task{
+			Id:          36,
+			Title:       "NewTask",
+			Description: "Napking",
+		})
 
 	if err != nil {
 		t.Fatal(err)
@@ -74,7 +77,7 @@ func TestCreateTask_Success(t *testing.T) {
 func TestCreateTask_NilTask(t *testing.T) {
 	service := NewTaskService(nil)
 
-	_, err := service.CreateTask(nil)
+	_, err := service.CreateTask(context.Background(), nil)
 
 	if err == nil {
 		t.Fatal("Expected error")
@@ -88,7 +91,7 @@ func TestUpdateTask_Success(test *testing.T) {
 	}
 
 	mockStore := &mocks.MockTaskStorage{
-		UpdateFunc: func(t *models.Task) error {
+		UpdateFunc: func(ctx context.Context, t *models.Task) error {
 			if t.Id != 36 {
 				test.Errorf("Expected 36, got %v", t.Id)
 			}
@@ -98,7 +101,7 @@ func TestUpdateTask_Success(test *testing.T) {
 
 	service := NewTaskService(mockStore)
 
-	err := service.UpdateTask(expected)
+	err := service.UpdateTask(context.Background(), expected)
 
 	if err != nil {
 		test.Fatal(err)
@@ -108,7 +111,7 @@ func TestUpdateTask_Success(test *testing.T) {
 func TestUpdateTask_NilTask(t *testing.T) {
 	service := NewTaskService(nil)
 
-	err := service.UpdateTask(nil)
+	err := service.UpdateTask(context.Background(), nil)
 
 	if err == nil {
 		t.Fatal("Expected error")
@@ -118,9 +121,11 @@ func TestUpdateTask_NilTask(t *testing.T) {
 func TestUpdateTask_InvalidId(t *testing.T) {
 	service := NewTaskService(nil)
 
-	err := service.UpdateTask(&models.Task{
-		Id: -2,
-	})
+	err := service.UpdateTask(
+		context.Background(),
+		&models.Task{
+			Id: -2,
+		})
 
 	var validationErr *ValidationError
 
@@ -132,7 +137,7 @@ func TestUpdateTask_InvalidId(t *testing.T) {
 func TestUpdateTask_EmptyTitle(t *testing.T) {
 	service := NewTaskService(nil)
 
-	err := service.UpdateTask(&models.Task{})
+	err := service.UpdateTask(context.Background(), &models.Task{})
 
 	var validationErr *ValidationError
 
@@ -143,18 +148,20 @@ func TestUpdateTask_EmptyTitle(t *testing.T) {
 
 func TestUpdateTask_NotFound(t *testing.T) {
 	mockStore := &mocks.MockTaskStorage{
-		UpdateFunc: func(t *models.Task) error {
+		UpdateFunc: func(ctx context.Context, t *models.Task) error {
 			return storage.ErrNotFound
 		},
 	}
 
 	service := NewTaskService(mockStore)
 
-	err := service.UpdateTask(&models.Task{
-		Id:          36,
-		Title:       "NewTask",
-		Description: "Napking",
-	})
+	err := service.UpdateTask(
+		context.Background(),
+		&models.Task{
+			Id:          36,
+			Title:       "NewTask",
+			Description: "Napking",
+		})
 
 	var notFoundErr *NotFoundError
 
@@ -167,7 +174,7 @@ func TestDeleteTask_Success(test *testing.T) {
 	expectedId := 36
 
 	mockStore := &mocks.MockTaskStorage{
-		DeleteFunc: func(id int) error {
+		DeleteFunc: func(ctx context.Context, id int) error {
 			if id != expectedId {
 				test.Errorf("Expected 36, got %v", id)
 			}
@@ -177,7 +184,7 @@ func TestDeleteTask_Success(test *testing.T) {
 
 	service := NewTaskService(mockStore)
 
-	err := service.DeleteTask(expectedId)
+	err := service.DeleteTask(context.Background(), expectedId)
 
 	if err != nil {
 		test.Fatal(err)
@@ -187,7 +194,7 @@ func TestDeleteTask_Success(test *testing.T) {
 func TestDeleteTask_InvalidId(t *testing.T) {
 	service := NewTaskService(nil)
 
-	err := service.DeleteTask(-2)
+	err := service.DeleteTask(context.Background(), -2)
 
 	var validationErr *ValidationError
 

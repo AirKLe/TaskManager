@@ -3,10 +3,12 @@ package api
 import (
 	"TaskManager/internal/models"
 	"TaskManager/internal/service"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type createTaskRequest struct {
@@ -87,7 +89,10 @@ func (h *TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) handleListTasks(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.service.ListTasks()
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	tasks, err := h.service.ListTasks(ctx)
 	if err != nil {
 		h.handleError(w, err)
 		return
@@ -98,7 +103,10 @@ func (h *TaskHandler) handleListTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) handleGetTask(w http.ResponseWriter, r *http.Request, id int) {
-	task, err := h.service.GetTask(id)
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	task, err := h.service.GetTask(ctx, id)
 	if err != nil {
 		h.handleError(w, err)
 		return
@@ -109,6 +117,9 @@ func (h *TaskHandler) handleGetTask(w http.ResponseWriter, r *http.Request, id i
 }
 
 func (h *TaskHandler) handleCreateTask(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
 	var body createTaskRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -121,7 +132,7 @@ func (h *TaskHandler) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		Description: body.Description,
 	}
 
-	id, err := h.service.CreateTask(t)
+	id, err := h.service.CreateTask(ctx, t)
 	if err != nil {
 		h.handleError(w, err)
 		return
@@ -135,6 +146,9 @@ func (h *TaskHandler) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) handleUpdateTask(w http.ResponseWriter, r *http.Request, id int) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
 	var body createTaskRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -148,7 +162,7 @@ func (h *TaskHandler) handleUpdateTask(w http.ResponseWriter, r *http.Request, i
 		Description: body.Description,
 	}
 
-	err := h.service.UpdateTask(t)
+	err := h.service.UpdateTask(ctx, t)
 	if err != nil {
 		h.handleError(w, err)
 		return
@@ -160,7 +174,10 @@ func (h *TaskHandler) handleUpdateTask(w http.ResponseWriter, r *http.Request, i
 }
 
 func (h *TaskHandler) handleDeleteTask(w http.ResponseWriter, r *http.Request, id int) {
-	if err := h.service.DeleteTask(id); err != nil {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	if err := h.service.DeleteTask(ctx, id); err != nil {
 		h.handleError(w, err)
 		return
 	}

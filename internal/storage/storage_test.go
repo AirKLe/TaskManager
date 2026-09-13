@@ -54,20 +54,22 @@ func TestGetByID(t *testing.T) {
 	storage := newTestStorage(t)
 	clearTasks(t, storage)
 
-	id, err := storage.Create(&models.Task{
-		Title:       "NewTask",
-		Description: "Napking",
-	})
+	id, err := storage.Create(
+		context.Background(),
+		&models.Task{
+			Title:       "NewTask",
+			Description: "Napking",
+		})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = storage.GetById(999999)
+	_, err = storage.GetById(context.Background(), 999999)
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("Expected ErrNotFound, got %v", err)
 	}
 
-	newTask, err := storage.GetById(id)
+	newTask, err := storage.GetById(context.Background(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,13 +94,13 @@ func TestGetAll(t *testing.T) {
 	}
 
 	for _, task := range tasks {
-		_, err := storage.Create(task)
+		_, err := storage.Create(context.Background(), task)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	newTasks, err := storage.GetAll()
+	newTasks, err := storage.GetAll(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,12 +119,12 @@ func TestCreate(t *testing.T) {
 		Description: "Napking",
 	}
 
-	id, err := storage.Create(task)
+	id, err := storage.Create(context.Background(), task)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := storage.GetById(id)
+	got, err := storage.GetById(context.Background(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +142,7 @@ func TestUpdate(t *testing.T) {
 		Title:       "NewTask",
 		Description: "Napking",
 	}
-	id, err := storage.Create(task)
+	id, err := storage.Create(context.Background(), task)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,12 +152,12 @@ func TestUpdate(t *testing.T) {
 		Title:       "New title",
 		Description: "New desc",
 	}
-	err = storage.Update(newTask)
+	err = storage.Update(context.Background(), newTask)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := storage.GetById(id)
+	got, err := storage.GetById(context.Background(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,17 +175,17 @@ func TestDelete(t *testing.T) {
 		Title:       "NewTask",
 		Description: "Napking",
 	}
-	id, err := storage.Create(task)
+	id, err := storage.Create(context.Background(), task)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = storage.Delete(id)
+	err = storage.Delete(context.Background(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := storage.GetById(id)
+	got, err := storage.GetById(context.Background(), id)
 	if got != nil && !errors.Is(err, ErrNotFound) {
 		t.Errorf("Expected task has not deleted:%v", task)
 	}
@@ -207,7 +209,7 @@ func TestConcurrentAccess(t *testing.T) {
 				Title: fmt.Sprintf("Task%d", i+1),
 			}
 
-			_, err := storage.Create(task)
+			_, err := storage.Create(context.Background(), task)
 			if err != nil {
 				t.Errorf("Create failed: %v", err)
 			}
@@ -216,7 +218,7 @@ func TestConcurrentAccess(t *testing.T) {
 
 	wg.Wait()
 
-	newTasks, err := storage.GetAll()
+	newTasks, err := storage.GetAll(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

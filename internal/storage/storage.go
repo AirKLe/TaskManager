@@ -12,11 +12,11 @@ import (
 )
 
 type TaskStorage interface {
-	GetById(id int) (*models.Task, error)
-	GetAll() ([]*models.Task, error)
-	Create(t *models.Task) (int, error)
-	Update(t *models.Task) error
-	Delete(id int) error
+	GetById(ctx context.Context, id int) (*models.Task, error)
+	GetAll(ctx context.Context) ([]*models.Task, error)
+	Create(ctx context.Context, t *models.Task) (int, error)
+	Update(ctx context.Context, t *models.Task) error
+	Delete(ctx context.Context, id int) error
 }
 
 var ErrNotFound = errors.New("not found")
@@ -32,7 +32,7 @@ func NewPostgresTaskStorage(db *pgxpool.Pool) *PostgresTaskStorage {
 	}
 }
 
-func (s *PostgresTaskStorage) GetById(id int) (*models.Task, error) {
+func (s *PostgresTaskStorage) GetById(ctx context.Context, id int) (*models.Task, error) {
 	query := `
 		SELECT id, title, description
 		FROM tasks
@@ -40,7 +40,7 @@ func (s *PostgresTaskStorage) GetById(id int) (*models.Task, error) {
 	`
 
 	task := &models.Task{}
-	err := s.db.QueryRow(context.Background(), query, id).Scan(
+	err := s.db.QueryRow(ctx, query, id).Scan(
 		&task.Id,
 		&task.Title,
 		&task.Description,
@@ -56,13 +56,13 @@ func (s *PostgresTaskStorage) GetById(id int) (*models.Task, error) {
 	return task.Clone(), nil
 }
 
-func (s *PostgresTaskStorage) GetAll() ([]*models.Task, error) {
+func (s *PostgresTaskStorage) GetAll(ctx context.Context) ([]*models.Task, error) {
 	query := `
 		SELECT id, title, description
 		FROM tasks
 	`
 
-	rows, err := s.db.Query(context.Background(), query)
+	rows, err := s.db.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -92,14 +92,14 @@ func (s *PostgresTaskStorage) GetAll() ([]*models.Task, error) {
 	return tasks, nil
 }
 
-func (s *PostgresTaskStorage) Create(t *models.Task) (int, error) {
+func (s *PostgresTaskStorage) Create(ctx context.Context, t *models.Task) (int, error) {
 	query := `
 		INSERT INTO tasks (title, description)
 		VALUES ($1,$2)
 		RETURNING id`
 
 	err := s.db.QueryRow(
-		context.Background(),
+		ctx,
 		query,
 		t.Title,
 		t.Description,
@@ -111,14 +111,14 @@ func (s *PostgresTaskStorage) Create(t *models.Task) (int, error) {
 	return t.Id, err
 }
 
-func (s *PostgresTaskStorage) Update(t *models.Task) error {
+func (s *PostgresTaskStorage) Update(ctx context.Context, t *models.Task) error {
 	query := `
 		UPDATE tasks
 		SET title = $1, description = $2
 		WHERE id = $3`
 
 	result, err := s.db.Exec(
-		context.Background(),
+		ctx,
 		query,
 		t.Title,
 		t.Description,
@@ -137,13 +137,13 @@ func (s *PostgresTaskStorage) Update(t *models.Task) error {
 	return nil
 }
 
-func (s *PostgresTaskStorage) Delete(id int) error {
+func (s *PostgresTaskStorage) Delete(ctx context.Context, id int) error {
 	query := `
 	DELETE FROM tasks
 	WHERE id = $1
 	`
 	result, err := s.db.Exec(
-		context.Background(),
+		ctx,
 		query,
 		id,
 	)

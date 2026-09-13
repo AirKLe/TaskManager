@@ -4,6 +4,7 @@ import (
 	"TaskManager/internal/mocks"
 	"TaskManager/internal/models"
 	"TaskManager/internal/service"
+	"context"
 	"encoding/json"
 	"strings"
 
@@ -20,7 +21,7 @@ func TestHandleGetTask_Success(t *testing.T) {
 	}
 
 	mockStore := &mocks.MockTaskStorage{
-		GetByIdFunc: func(id int) (*models.Task, error) {
+		GetByIdFunc: func(cxt context.Context, id int) (*models.Task, error) {
 			return expected, nil
 		},
 	}
@@ -54,7 +55,7 @@ func TestHandleGetTask_InvalidId(t *testing.T) {
 	}
 
 	mockStore := &mocks.MockTaskStorage{
-		GetByIdFunc: func(id int) (*models.Task, error) {
+		GetByIdFunc: func(cxt context.Context, id int) (*models.Task, error) {
 			return expected, nil
 		},
 	}
@@ -82,7 +83,7 @@ func TestHandleGetTask_InvalidId(t *testing.T) {
 
 func TestHandleCreateTask_Success(t *testing.T) {
 	mockStore := &mocks.MockTaskStorage{
-		CreateFunc: func(t *models.Task) (int, error) {
+		CreateFunc: func(cxt context.Context, t *models.Task) (int, error) {
 			return t.Id, nil
 		},
 	}
@@ -113,7 +114,7 @@ func TestHandleCreateTask_Success(t *testing.T) {
 
 func TestHandleCreateTask_InvalidJSON(t *testing.T) {
 	mockStore := &mocks.MockTaskStorage{
-		CreateFunc: func(t *models.Task) (int, error) {
+		CreateFunc: func(cxt context.Context, t *models.Task) (int, error) {
 			return t.Id, nil
 		},
 	}
@@ -142,7 +143,7 @@ func TestHandleCreateTask_InvalidJSON(t *testing.T) {
 
 func TestHandleUpdateTask_Success(test *testing.T) {
 	mockStore := &mocks.MockTaskStorage{
-		UpdateFunc: func(t *models.Task) error {
+		UpdateFunc: func(cxt context.Context, t *models.Task) error {
 			if t.Id != 36 {
 				test.Errorf("Expected 36, got %v", t.Id)
 			}
@@ -212,7 +213,7 @@ func TestHandleDeleteTask_Success(test *testing.T) {
 	expectedId := 36
 
 	mockStore := &mocks.MockTaskStorage{
-		DeleteFunc: func(id int) error {
+		DeleteFunc: func(cxt context.Context, id int) error {
 			if id != expectedId {
 				test.Errorf("Expected 36, got %v", id)
 			}
